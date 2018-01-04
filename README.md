@@ -597,10 +597,11 @@ You must submit your code (see below) as well as a short (2 pages, maximum) writ
 *   Describe any design decisions you made. These may be minimal for
 Lab 1.
 *   Give one example of a unit test that could be added to improve the
-    set of unit tests that we provided for this lab. **Write the code
-    for the unit test and submit a pull request.** We will integrate
-    the best unit test(s) that we receive into the official unit tests for this lab to
-    improve the SimpleDB project.
+    set of unit tests that we provided for this lab. You do not need to
+    write the code of the unit test, only describe it in the write-up.
+    If you wrote one or more especially useful new unit-tests, you can submit
+    a pull request and we will consider integrating your tests into the lab for next year.
+    Pull requests won't get extra credit, only eternal glory if the tests get integrated.
 *   Discuss and justify any changes you made to the API. You really
     should not change the API. If you plan to make a change, ask the
     TAs first.
