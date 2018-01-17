@@ -1,6 +1,8 @@
 package simpledb;
 
 import java.io.*;
+import java.util.Map;
+import java.util.HashMap;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BufferPool {
     /** Bytes per page, including header. */
     private static final int DEFAULT_PAGE_SIZE = 4096;
+    private Map<PageId, Page> pageMap;
+    int maxPages;
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
     
@@ -32,7 +36,8 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // some code goes here
+        pageMap = new HashMap<PageId, Page>();
+        maxPages = numPages;
     }
     
     public static int getPageSize() {
@@ -64,10 +69,18 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        if(pageMap.containsKey(pid)) {
+            return pageMap.get(pid);
+        }
+        if(pageMap.keySet().size() == maxPages) {
+            throw new DbException("Max Page Limit reached");
+        }
+        int tableId = pid.getTableId();
+        Page returned = Database.getCatalog().getDatabaseFile(tableId).readPage(pid);
+        pageMap.put(pid, returned);
+        return returned;
     }
 
     /**
@@ -79,7 +92,7 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      * @param pid the ID of the page to unlock
      */
-    public  void releasePage(TransactionId tid, PageId pid) {
+    public void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
     }
