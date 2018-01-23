@@ -7,6 +7,9 @@ import java.io.Serializable;
  */
 public class Predicate implements Serializable {
 
+    private int field;
+    private Op op;
+    private Field operand;
     private static final long serialVersionUID = 1L;
 
     /** Constants used for return codes in Field.compare */
@@ -55,7 +58,9 @@ public class Predicate implements Serializable {
      *            field value to compare passed in tuples to
      */
     public Predicate(int field, Op op, Field operand) {
-        // some code goes here
+        this.field = field;
+        this.op = op;
+        this.operand = operand;
     }
 
     /**
@@ -63,8 +68,7 @@ public class Predicate implements Serializable {
      */
     public int getField()
     {
-        // some code goes here
-        return -1;
+        return this.field;
     }
 
     /**
@@ -72,8 +76,7 @@ public class Predicate implements Serializable {
      */
     public Op getOp()
     {
-        // some code goes here
-        return null;
+        return this.op;
     }
     
     /**
@@ -81,8 +84,7 @@ public class Predicate implements Serializable {
      */
     public Field getOperand()
     {
-        // some code goes here
-        return null;
+        return this.operand;
     }
     
     /**
@@ -96,8 +98,8 @@ public class Predicate implements Serializable {
      * @return true if the comparison is true, false otherwise.
      */
     public boolean filter(Tuple t) {
-        // some code goes here
-        return false;
+        Field returned = t.getField(this.field);
+        return returned.compare(this.op, this.operand);
     }
 
     /**
@@ -105,7 +107,6 @@ public class Predicate implements Serializable {
      * operand_string"
      */
     public String toString() {
-        // some code goes here
-        return "";
+       return "f = " + this.field + " ,op = " + this.op + " ,operand = " + this.operand;
     }
 }
