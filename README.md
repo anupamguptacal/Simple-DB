@@ -163,7 +163,7 @@ Notice that `BufferPool` asks you to implement a `flushAllPages()` method. This 
 
 *   `src/simpledb/BufferPool.java`
 
-If you did not implement `writePage()` in `HeapFile.java` above, you will also need to do that here. *For this lab, you do not need to implement `writePage()`.*
+If you did not implement `writePage()` in `HeapFile.java` above, you will also need to do that here.
 
 At this point, your code should pass the `EvictionTest` system test.
 
