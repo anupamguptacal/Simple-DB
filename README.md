@@ -2,6 +2,7 @@
 
 #### Version History:
 *   1/18/17 : Initial version
+*   1/24/18 : Added a test for scanning heapfiles that have empty pages in the middle
 
 ## DEADLINES
 ##### Part 1 Due: Wednesday, January 24, 2018
