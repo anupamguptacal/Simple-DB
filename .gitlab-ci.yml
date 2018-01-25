@@ -7,7 +7,9 @@ before_script:
   - export ANT_HOME=${PWD}/apache-ant-${ANT_VERSION}
   - export PATH=${PATH}:${ANT_HOME}/bin
 build:
-  script: ant compile dist
+  script:
+    - ant clean
+    - ant compile dist
 test:
   script:
     - ant test
