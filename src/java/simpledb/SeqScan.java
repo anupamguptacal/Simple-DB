@@ -14,6 +14,7 @@ public class SeqScan implements OpIterator {
     private String tableAlias;
     private HeapFile heapFile;
     private DbFileIterator dbFileIterator;
+    TupleDesc tupleDesc;
     private static final long serialVersionUID = 1L;
 
     /**
@@ -38,6 +39,15 @@ public class SeqScan implements OpIterator {
         this.tableAlias = tableAlias;
         heapFile = (HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
         dbFileIterator = heapFile.iterator(this.transactionId);
+        tupleDesc = Database.getCatalog().getTupleDesc(this.tableid);
+        int numberOfFields = tupleDesc.numFields();
+        Type[] returnedType = new Type[numberOfFields];
+        String[] returnedString = new String[numberOfFields];
+        for(int i = 0; i < numberOfFields; i ++) {
+            returnedType[i] = tupleDesc.getFieldType(i);
+            returnedString[i] = this.tableAlias + "." +  tupleDesc.getFieldName(i);
+        }
+        tupleDesc = new TupleDesc(returnedType, returnedString);
     }
 
     /**
@@ -74,6 +84,15 @@ public class SeqScan implements OpIterator {
         this.tableAlias = tableAlias;
         this.heapFile = (HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
         this.dbFileIterator = this.heapFile.iterator(this.transactionId);
+        tupleDesc = Database.getCatalog().getTupleDesc(this.tableid);
+        int numberOfFields = tupleDesc.numFields();
+        Type[] returnedType = new Type[numberOfFields];
+        String[] returnedString = new String[numberOfFields];
+        for(int i = 0; i < numberOfFields; i ++) {
+            returnedType[i] = tupleDesc.getFieldType(i);
+            returnedString[i] = this.tableAlias + "." + tupleDesc.getFieldName(i);
+        }
+        tupleDesc = new TupleDesc(returnedType, returnedString);
     }
 
     public SeqScan(TransactionId tid, int tableId) {
@@ -95,15 +114,7 @@ public class SeqScan implements OpIterator {
      *         prefixed with the tableAlias string from the constructor.
      */
     public TupleDesc getTupleDesc() {
-       TupleDesc tupleDesc = Database.getCatalog().getTupleDesc(this.tableid);
-       int numberOfFields = tupleDesc.numFields();
-       Type[] returnedType = new Type[numberOfFields];
-       String[] returnedString = new String[numberOfFields];
-       for(int i = 0; i < numberOfFields; i ++) {
-           returnedType[i] = tupleDesc.getFieldType(i);
-           returnedString[i] = this.tableAlias + tupleDesc.getFieldName(i);
-       }
-       return new TupleDesc(returnedType, returnedString);
+       return tupleDesc;
     }
 
     public boolean hasNext() throws TransactionAbortedException, DbException {

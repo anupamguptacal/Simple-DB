@@ -16,7 +16,7 @@ public class Join extends Operator {
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
-     * 
+     *
      * @param p
      *            The predicate to use to join the children
      * @param child1
@@ -41,10 +41,10 @@ public class Join extends Operator {
      *       alias or table name.
      * */
     public String getJoinField1Name() {
-         int number = p.getField1();
-         TupleDesc t  = child1.getTupleDesc();
-         String name = t.getFieldName(number);
-         return name;
+        int number = p.getField1();
+        TupleDesc t  = child1.getTupleDesc();
+        String name = t.getFieldName(number);
+        return name;
     }
 
     /**
@@ -102,7 +102,7 @@ public class Join extends Operator {
      * <p>
      * For example, if one tuple is {1,2,3} and the other tuple is {1,5,6},
      * joined on equality of the first column, then this returns {1,2,3,1,5,6}.
-     * 
+     *
      * @return The next matching tuple.
      * @see JoinPredicate#filter
      */
@@ -144,12 +144,12 @@ public class Join extends Operator {
 
     @Override
     public void setChildren(OpIterator[] children) {
-       if(this.child1 != children[0]) {
-           this.child1 = children[0];
-       }
-       if (this.child2 != children[1]) {
-           this.child2 = children[1];
-       }
+        if(this.child1 != children[0]) {
+            this.child1 = children[0];
+        }
+        if (this.child2 != children[1]) {
+            this.child2 = children[1];
+        }
     }
 
 }
