@@ -71,6 +71,7 @@ You will need to add calls to SimpleDB (in `BufferPool`, for example), that allo
 We recommend locking at _**page**_ **granularity**, though you should be able to implement locking at _tuple_ granularity if you wish (please do not implement table-level locking). The rest of this document and our unit tests assume page-level locking.
 
 You will need to **create data structures** that keep track of which locks each transaction holds and that check to see if a lock should be granted to a transaction when it is requested. This is important. We recommend that you implement a new, **LockManager class** that will hold these data structures and will manage locking and unlocking operations.
+Note: Make sure that a call to resetBufferPool() also resets your LockManager because the tests rely on this.
 
 You will need to implement shared and exclusive locks; recall that these work as follows:
 
@@ -174,7 +175,7 @@ You have now completed this lab. Good work!
 
 ## 3\. Logistics
 
-You must submit your code (see below) as well as a short (2 pages, maximum) writeup describing your approach. This writeup should:
+You must submit your code (see below) as well as a short (2 pages, approximately) writeup describing your approach. This writeup should:
 
 * In your own words, describe what this lab was about: Describe the various components that
     you implemented and how they work. This part needs to
