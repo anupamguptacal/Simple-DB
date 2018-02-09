@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -25,6 +26,7 @@ public class BufferPool {
     private static final int DEFAULT_PAGE_SIZE = 4096;
     private Map<PageId, Page> pageMap;
     int maxPages;
+    LockManager lockManager;
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
     
@@ -41,6 +43,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         pageMap = new HashMap<PageId, Page>();
         maxPages = numPages;
+        lockManager = new LockManager();
     }
     
     public static int getPageSize() {
@@ -55,6 +58,10 @@ public class BufferPool {
     // THIS FUNCTION SHOULD ONLY BE USED FOR TESTING!!
     public static void resetPageSize() {
     	BufferPool.pageSize = DEFAULT_PAGE_SIZE;
+    }
+
+    public LockManager getLockManager() {
+        return this.lockManager;
     }
 
     /**
@@ -74,6 +81,34 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
+        //System.out.println("Called Get Page again");
+        boolean gotLock = false;
+        long start = System.currentTimeMillis();
+        while(!gotLock) {
+            synchronized(this) {
+                //System.out.println("Asking for lock on page =" + pid + "by transaction = " + tid);
+                if (perm == Permissions.READ_ONLY) {
+                    gotLock = this. lockManager.getReadLock(pid, tid);
+                    //System.out.println("gotLock returned = " + gotLock);
+                } else {
+                    gotLock = this.lockManager.getExclusiveLock(pid, tid);
+                }
+                //System.out.println("got Luck value at the end = " + gotLock);
+            }
+                if (!gotLock) {
+                    try {
+                        //System.out.println("Sleeping thread");
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                /*if ((System.currentTimeMillis() - start) > 500) {
+                    throw new TransactionAbortedException();
+                }*/
+        }
+        //System.out.println("Came outside loop");
         if(pageMap.containsKey(pid)) {
             return pageMap.get(pid);
         }
@@ -96,8 +131,8 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public void releasePage(TransactionId tid, PageId pid) {
-        // some code goes here
-        // not necessary for lab1|lab2
+        this.lockManager.releaseExclusiveLock(pid, tid);
+        this.lockManager.releaseReadLock(pid, tid);
     }
 
     /**
@@ -112,9 +147,7 @@ public class BufferPool {
 
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId p) {
-        // some code goes here
-        // not necessary for lab1|lab2
-        return false;
+        return this.lockManager.hasExclusiveLock(p, tid) || this.lockManager.hasReadLock(p, tid);
     }
 
     /**
