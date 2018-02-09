@@ -32,10 +32,6 @@ public class LockManager {
                 }
                 return true;
             } else {
-                //If not by same transaction then return false, it will have to wait.
-                System.out.println("TransactionId asking for read lock = " + transactionId);
-                System.out.println("TransactionId that has exclusive lock = " + exclusiveLock.get(pageId));
-                System.out.println("Returning false");
                 return false;
             }
         } else {
@@ -57,7 +53,7 @@ public class LockManager {
     }
 
     public synchronized boolean releaseReadLock(PageId pageId, TransactionId transactionId) {
-        System.out.println("Release Read Lock called");
+        //System.out.println("Release Read Lock called");
         if(readLock.containsKey(pageId)) {
             Set<TransactionId> storeValues = readLock.get(pageId);
             storeValues.remove(transactionId);
@@ -99,7 +95,7 @@ public class LockManager {
     }
 
     public synchronized boolean releaseExclusiveLock(PageId pageId, TransactionId transactionId) {
-        System.out.println("Release Exclusive Lock called");
+        //System.out.println("Release Exclusive Lock called");
         //If not released by the same transaction don't remove exclusive lock else remove.
         if(exclusiveLock.containsKey(pageId)) {
             if(exclusiveLock.get(pageId).equals(transactionId)) {
