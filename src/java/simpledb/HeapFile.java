@@ -83,9 +83,9 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
         int offset = page.getId().getPageNumber() * BufferPool.getPageSize();
-        if(page.getId().getTableId() != this.getId()) {
-            throw new IOException("Page cannot be added to this table since it doesn't belong to it. TableID does not match");
-        }
+//        if(page.getId().getTableId() != this.getId()) {
+//            throw new IOException("Page cannot be added to this table since it doesn't belong to it. TableID does not match");
+//        }
         RandomAccessFile raf = new RandomAccessFile(this.file, "rw");
         raf.seek(offset);
         raf.write(page.getPageData());
@@ -122,17 +122,14 @@ public class HeapFile implements DbFile {
                     }
                 }
                 HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
-                HeapPage heapPage = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
+                HeapPage heapPage = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_WRITE);
                 if (heapPage.getNumEmptySlots() == 0) {
                     pageNumber++;
                     Database.getBufferPool().releasePage(tid, heapPageId);
                     continue;
                 } else {
-                    Database.getBufferPool().releasePage(tid, heapPageId);
-                    heapPage = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_WRITE);
                     heapPage.insertTuple(t);
                     heapPage.markDirty(true, tid);
-                    Database.getBufferPool().releasePage(tid, heapPageId);
                 }
                 storage.add(heapPage);
                 found = true;
@@ -157,7 +154,6 @@ public class HeapFile implements DbFile {
                page.deleteTuple(t);
                page.markDirty(true, tid);
                storage.add(page);
-               Database.getBufferPool().releasePage(tid, recordId.getPageId());
                return storage;
            } catch(DbException e) {
                throw new DbException(e.getMessage() + e.getLocalizedMessage());
@@ -189,7 +185,6 @@ public class HeapFile implements DbFile {
                 } else {
                     while(pageNumber < numPages() - 1) {
                         pageNumber ++;
-                        Database.getBufferPool().releasePage(tid, page.getId());
                         HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
                         page = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
                         tupleIterator = page.iterator();
@@ -197,7 +192,6 @@ public class HeapFile implements DbFile {
                             return true;
                         }
                     }
-                    Database.getBufferPool().releasePage(tid, page.getId());
                     return false;
                 }
             }
@@ -213,7 +207,6 @@ public class HeapFile implements DbFile {
 
             @Override
             public void rewind() throws DbException, TransactionAbortedException {
-                Database.getBufferPool().releasePage(tid, page.getId());
                 pageNumber = 0;
                 HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
                 page = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
@@ -222,7 +215,6 @@ public class HeapFile implements DbFile {
 
             @Override
             public void close() {
-                Database.getBufferPool().releasePage(tid, page.getId());
                 page = null;
                 tupleIterator = null;
                 pageNumber = 0;

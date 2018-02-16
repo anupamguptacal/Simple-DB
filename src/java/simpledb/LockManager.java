@@ -1,73 +1,127 @@
 package simpledb;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class LockManager {
 
-     Map<PageId, TransactionId> exclusiveLock; //= new HashMap<PageId, TransactionId>();
-     Map<PageId, Set<TransactionId>> readLock;//= new HashMap<PageId, Set<TransactionId>>();
+     Map<PageId, TransactionId> exclusiveLock;
+     Map<PageId, Set<TransactionId>> readLock;
+     Map<TransactionId, Set<TransactionId>> dependencyMapping;
 
     public LockManager() {
         exclusiveLock = new HashMap<PageId, TransactionId>();
         readLock = new HashMap<PageId, Set<TransactionId>>();
+        dependencyMapping = new HashMap<TransactionId, Set<TransactionId>>();
     }
 
-    public synchronized boolean getReadLock(PageId pageId, TransactionId transactionId) {
-        //System.out.println("Came to getReadLock, transaction = " + transactionId);
+
+    public synchronized boolean getReadLock(PageId pageId, TransactionId transactionId) throws TransactionAbortedException {
         if(exclusiveLock.containsKey(pageId)) {
-            //System.out.println("Has Exclusive lock also");
-            // If exclusive lock is on the same page by the same transaction then it can have read lock also
             if(transactionId.equals(exclusiveLock.get(pageId))) {
                 if(readLock.containsKey(pageId)) {
                     Set<TransactionId> valueStored = readLock.get(pageId);
                     valueStored.add(transactionId);
-                    readLock.put(pageId, valueStored);
 
+                    readLock.put(pageId, valueStored);
                 } else {
                     HashSet<TransactionId> insertion = new HashSet<TransactionId>();
                     insertion.add(transactionId);
+
                     readLock.put(pageId, insertion);
                 }
                 return true;
             } else {
+                if(!addToDependencyMapping(exclusiveLock.get(pageId), transactionId)) {
+                    throw new TransactionAbortedException();
+                }
                 return false;
             }
         } else {
-            //System.out.println("Does not have exclusive lock");
-            // If not held by exclusive lock just add to readLock
             if(readLock.containsKey(pageId)) {
                 Set<TransactionId> valueStored = readLock.get(pageId);
                 valueStored.add(transactionId);
-                readLock.put(pageId, valueStored);
 
+                readLock.put(pageId, valueStored);
             } else {
                 HashSet<TransactionId> insertion = new HashSet<TransactionId>();
                 insertion.add(transactionId);
+
                 readLock.put(pageId, insertion);
             }
-            //System.out.println("Returning true" + readLock.keySet());
             return true;
         }
     }
 
+    public synchronized void removeFromDependency(TransactionId transactionId) {
+        dependencyMapping.remove(transactionId);
+        for(Entry<TransactionId, Set<TransactionId>> entry: dependencyMapping.entrySet()) {
+            Set<TransactionId> valueStored = entry.getValue();
+            valueStored.remove(transactionId);
+            dependencyMapping.put(entry.getKey(), valueStored);
+        }
+    }
+
     public synchronized boolean releaseReadLock(PageId pageId, TransactionId transactionId) {
-        //System.out.println("Release Read Lock called");
         if(readLock.containsKey(pageId)) {
             Set<TransactionId> storeValues = readLock.get(pageId);
             storeValues.remove(transactionId);
+
             readLock.put(pageId, storeValues);
         }
         return true;
     }
 
-    public synchronized boolean getExclusiveLock(PageId pageId, TransactionId transactionId) {
-        // If there is a read lock on the page by the same transaction only, then it's okay to get the exclusive lock
-        if(exclusiveLock.containsKey(pageId)) {
+    public synchronized boolean identifyDeadLock(TransactionId transactionId, PageId pageId) {
+        if(exclusiveLock.containsKey(pageId) && !exclusiveLock.get(pageId).equals(transactionId)) {
+            // some other transaction has an exclusive lock on the page I want.
+            // deadlock if I have an exclusive lock on some page the same transaction wants
+            if(dependencyMapping.containsKey(transactionId)) {
+                Set<TransactionId> transactionsWaitingOnMe = dependencyMapping.get(transactionId);
+                if(transactionsWaitingOnMe.contains(exclusiveLock.get(pageId))) {
+                    return true;
+                }
+            }
+            TransactionId holdingLock = exclusiveLock.get(pageId);
+            Set<TransactionId> transactionSet = new HashSet<TransactionId>();
+            if(dependencyMapping.containsKey(holdingLock)) {
+                transactionSet = dependencyMapping.get(holdingLock);
+                transactionSet.add(transactionId);
+            }
+            dependencyMapping.put(holdingLock, transactionSet);
+        }
+        return false;
+    }
+
+    public synchronized boolean addToDependencyMapping(TransactionId toAddTo, TransactionId transactionId) {
+        if(identifyDeadLockExists(transactionId, toAddTo)) {
             return false;
         }
+        if(!dependencyMapping.containsKey(toAddTo)) {
+            dependencyMapping.put(toAddTo, new HashSet<TransactionId>());
+        }
+        Set<TransactionId> transactionIds = dependencyMapping.get(toAddTo);
+        transactionIds.add(transactionId);
+        dependencyMapping.put(toAddTo, transactionIds);
+        return true;
+    }
 
+    public synchronized boolean identifyDeadLockExists(TransactionId first, TransactionId second) {
+        if(dependencyMapping.containsKey(first)) {
+            Set<TransactionId> transactionsWaitingOnMe = dependencyMapping.get(first);
+            if(transactionsWaitingOnMe.contains(second)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized boolean getExclusiveLock(PageId pageId, TransactionId transactionId) throws TransactionAbortedException{
+        if(exclusiveLock.containsKey(pageId) && (!exclusiveLock.get(pageId).equals(transactionId))) {
+            if(!addToDependencyMapping(exclusiveLock.get(pageId), transactionId)) {
+                throw new TransactionAbortedException();
+            }
+            return false;
+        }
         //If read lock exists do further checking otherwise just allow the exclusive lock since it's not read locked
         if(readLock.containsKey(pageId)) {
             //If read lock holds empty set or the only read lock is by the same transaction then it's okay allow
@@ -76,37 +130,56 @@ public class LockManager {
             if(returnValue.size() != 0) {
                 if(returnValue.size() == 1) {
                     if(returnValue.contains(transactionId)) {
+                        if(identifyDeadLock(transactionId, pageId)) {
+                            throw new TransactionAbortedException();
+                        }
+
                         exclusiveLock.put(pageId, transactionId);
                         return true;
                     } else {
+                        if(!addToDependencyMapping(readLock.get(pageId).iterator().next(), transactionId)) {
+                            throw new TransactionAbortedException();
+                        }
                         return false;
                     }
                 } else {
+                    Iterator<TransactionId> iterator = readLock.get(pageId).iterator();
+                    while(iterator.hasNext()) {
+                        if(!addToDependencyMapping(iterator.next(), transactionId)) {
+                            throw new TransactionAbortedException();
+                        }
+                    }
                     return false;
                 }
             } else {
+                if(identifyDeadLock(transactionId, pageId)) {
+                    throw new TransactionAbortedException();
+                }
+
                 exclusiveLock.put(pageId, transactionId);
                 return true;
             }
         } else {
+            if(identifyDeadLock(transactionId, pageId)) {
+                throw new TransactionAbortedException();
+            }
+
             exclusiveLock.put(pageId, transactionId);
             return true;
         }
     }
 
     public synchronized boolean releaseExclusiveLock(PageId pageId, TransactionId transactionId) {
-        //System.out.println("Release Exclusive Lock called");
-        //If not released by the same transaction don't remove exclusive lock else remove.
         if(exclusiveLock.containsKey(pageId)) {
             if(exclusiveLock.get(pageId).equals(transactionId)) {
+
                 exclusiveLock.remove(pageId);
-                //System.out.println("Exclusive lock removed") ;
                 return true;
+
             } else {
                 return false;
             }
         } else {
-            //System.out.println("No exclusive lock found for this page");
             return true;
         }
     }
