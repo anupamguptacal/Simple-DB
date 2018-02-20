@@ -12,6 +12,5 @@ build:
     - ant compile dist
 test:
   script:
-    - ant test
-    - ant systemtest
+    - ant runtest -Dtest=systemtest.LogTest
 
