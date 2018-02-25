@@ -42,6 +42,9 @@ You will next need to make the following changes to your existing code:
 
 This causes the logging system to write an update to the log. We force the log to ensure the log record is on disk before the page is written to disk.
 
+Now modify the code above to also check that the dirtier is still executing. If the dirtier is executing, we want to log the change. If the dirtier
+already committed, then we don't need to log the change because we already logged it before writing the COMMIT log record.
+
 3. *STEAL:* You can now modify `BufferPool.evictPage()` to allow it to flush any page to disk.
 
 4.  *NO FORCE:* Your `BufferPool.transactionComplete()` calls `flushPage()` for each page that a committed transaction dirtied. Remove the calls to `flushPage()`. We no longer need to force pages to disk at commit time. However, for each of these dirtied pages, we now need to add a call to `logWrite(tid, p.getBeforeImage(), p)` and then, of course, force the log to disk. We need to make sure that we can redo the changes to all dirtied pages even if they were never flushed to disk. Finally, add a call to `p.setBeforeImage()`.
