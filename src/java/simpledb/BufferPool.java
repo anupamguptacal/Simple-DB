@@ -149,9 +149,14 @@ public class BufferPool {
         throws IOException {
         if(commit) {
             for(Entry<PageId, Page> entry : pageMap.entrySet()) {
-                if(entry.getValue().isDirty() != null && entry.getValue().isDirty().equals(tid)) {
-                    flushPage(entry.getKey());
+                //if(entry.getValue().isDirty() != null && entry.getValue().isDirty().equals(tid)) {
+                   // flushPage(entry.getKey());
+                if (holdsLock(tid, entry.getKey())) {
+                    Database.getLogFile().logWrite(tid, entry.getValue().getBeforeImage(), entry.getValue());
+                    Database.getLogFile().force();
+                    entry.getValue().setBeforeImage();
                 }
+                //}
             }
         } else {
             for(Entry<PageId, Page> entry : pageMap.entrySet()) {
@@ -162,10 +167,11 @@ public class BufferPool {
                 }
             }
         }
-        for(Entry<PageId, Page> entry : pageMap.entrySet()) {
+        /*for(Entry<PageId, Page> entry : pageMap.entrySet()) {
             this.lockManager.releaseExclusiveLock(entry.getKey(), tid);
             this.lockManager.releaseReadLock(entry.getKey(), tid);
-        }
+        }*/
+        this.lockManager.releaseTransaction(tid);
         this.lockManager.removeFromDependency(tid);
     }
 
@@ -224,6 +230,7 @@ public class BufferPool {
         }
     }
 
+
     /**
      * Flush all dirty pages to disk.
      * NB: Be careful using this routine -- it writes dirty data to disk so will
@@ -243,9 +250,8 @@ public class BufferPool {
         Also used by B+ tree files to ensure that deleted pages
         are removed from the cache so they can be reused safely
     */
-    public synchronized void discardPage(PageId pid) {
-        // some code goes here
-        // not necessary for lab1
+    public void discardPage(PageId pid) {
+        pageMap.remove(pid);
     }
 
     /**
@@ -257,6 +263,11 @@ public class BufferPool {
             Page page = pageMap.get(pid);
             if(page.isDirty() != null) {
                 HeapFile file = (HeapFile)Database.getCatalog().getDatabaseFile(pid.getTableId());
+                TransactionId dirtier = page.isDirty();
+                if (dirtier != null){
+                    Database.getLogFile().logWrite(dirtier, page.getBeforeImage(), page);
+                    Database.getLogFile().force();
+                }
                 file.writePage(page);
                 page.markDirty(false, null);
             }
@@ -276,7 +287,11 @@ public class BufferPool {
      */
     private synchronized void evictPage() throws DbException {
         if(pageMap.keySet().size() == maxPages) {
-            PageId pageId = null;
+
+            int randomNumber = (int) (Math.random() * (pageMap.size() - 1));
+            ArrayList<PageId> arrayList = new ArrayList<PageId>(pageMap.keySet());
+            PageId pageId = arrayList.get(randomNumber);
+            /*PageId pageId = null;
             for(Entry<PageId, Page> entry: pageMap.entrySet()) {
                 if(entry.getValue().isDirty() == null) {
                     pageId = entry.getKey();
@@ -284,7 +299,7 @@ public class BufferPool {
             }
             if(pageId == null) {
                 throw new DbException("No pages can be evicted at this point");
-            }
+            }*/
             try {
                 flushPage(pageId);
             } catch(IOException e) {

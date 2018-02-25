@@ -14,6 +14,22 @@ public class LockManager {
         dependencyMapping = new HashMap<TransactionId, Set<TransactionId>>();
     }
 
+    public synchronized void releaseTransaction(TransactionId tid) {
+        Set<PageId> toRelease = new HashSet<PageId>();
+        for(PageId pageId : exclusiveLock.keySet()) {
+            if(exclusiveLock.get(pageId).equals(tid)) {
+                toRelease.add(pageId);
+            }
+        }
+        for(PageId pageId: toRelease) {
+            exclusiveLock.remove(pageId);
+        }
+        for(PageId pageId: readLock.keySet()) {
+            Set<TransactionId> storeValues = readLock.get(pageId);
+            storeValues.remove(tid);
+            readLock.put(pageId, storeValues);
+        }
+    }
 
     public synchronized boolean getReadLock(PageId pageId, TransactionId transactionId) throws TransactionAbortedException {
         if(exclusiveLock.containsKey(pageId)) {
