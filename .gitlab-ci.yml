@@ -12,5 +12,8 @@ build:
     - ant compile dist
 test:
   script:
-    - ant runtest -Dtest=systemtest.LogTest
+    - ant runtest -Dtest=WorkerTest
+    - ant runtest -Dtest=ShuffleTest
+    - ant runtest -Dtest=ParallelAggregateTest
+    - ant runtest -Dtest=systemtest.ParallelTest
 
