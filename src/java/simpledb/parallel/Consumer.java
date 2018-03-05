@@ -26,13 +26,15 @@ public abstract class Consumer extends Exchange {
      * */
     public ExchangeMessage take(int timeout) throws InterruptedException {
 
-        if (timeout >= 0)
+        if (timeout >= 0) {
+            System.out.println("buffer before polling = " + buffer);
             return buffer.poll(timeout, TimeUnit.MILLISECONDS);
-        else
+        } else
             return buffer.take();
     }
 
     public void setBuffer(LinkedBlockingQueue<ExchangeMessage> buffer) {
+        System.out.println("buffer = " + buffer);
         this.buffer = buffer;
     }
 

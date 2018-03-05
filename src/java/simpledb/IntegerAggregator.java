@@ -73,7 +73,6 @@ public class IntegerAggregator implements Aggregator {
             desc = new TupleDesc(array, nameArray);
             tuple = new Tuple(desc);
         }
-
     }
 
     /**

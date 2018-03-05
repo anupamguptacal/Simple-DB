@@ -11,9 +11,10 @@ public class SeqScan implements OpIterator {
 
     private TransactionId transactionId;
     private int tableid;
+    private String tableName;
     private String tableAlias;
-    private HeapFile heapFile;
-    private DbFileIterator dbFileIterator;
+    transient private HeapFile heapFile;
+    transient private DbFileIterator dbFileIterator;
     TupleDesc tupleDesc;
     private static final long serialVersionUID = 1L;
 
@@ -37,8 +38,9 @@ public class SeqScan implements OpIterator {
         this.transactionId = tid;
         this.tableid = tableid;
         this.tableAlias = tableAlias;
-        heapFile = (HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
-        dbFileIterator = heapFile.iterator(this.transactionId);
+        this.tableName = Database.getCatalog().getTableName(this.tableid);
+        heapFile = null;//(HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
+        dbFileIterator = null;//heapFile.iterator(this.transactionId);
         tupleDesc = Database.getCatalog().getTupleDesc(this.tableid);
         int numberOfFields = tupleDesc.numFields();
         Type[] returnedType = new Type[numberOfFields];
@@ -56,7 +58,8 @@ public class SeqScan implements OpIterator {
      *       be the actual name of the table in the catalog of the database
      * */
     public String getTableName() {
-        return Database.getCatalog().getTableName(this.tableid);
+
+        return this.tableName;
     }
 
     /**
@@ -83,6 +86,7 @@ public class SeqScan implements OpIterator {
         this.tableid = tableid;
         this.tableAlias = tableAlias;
         this.heapFile = (HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
+        this.tableName = Database.getCatalog().getTableName(this.tableid);
         this.dbFileIterator = this.heapFile.iterator(this.transactionId);
         tupleDesc = Database.getCatalog().getTupleDesc(this.tableid);
         int numberOfFields = tupleDesc.numFields();
@@ -100,7 +104,9 @@ public class SeqScan implements OpIterator {
     }
 
     public void open() throws DbException, TransactionAbortedException {
-      this.dbFileIterator.open();
+        heapFile = (HeapFile)Database.getCatalog().getDatabaseFile(this.tableid);
+        dbFileIterator = heapFile.iterator(this.transactionId);
+        this.dbFileIterator.open();
     }
 
     /**

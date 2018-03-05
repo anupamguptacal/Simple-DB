@@ -53,8 +53,10 @@ public class Join extends Operator {
      *       alias or table name.
      * */
     public String getJoinField2Name() {
-        int number = p.getField1();
+        int number = p.getField2();
         TupleDesc t  = child2.getTupleDesc();
+        System.out.println("t = " + t);
+        System.out.println("Number = " + number);
         String name = t.getFieldName(number);
         return name;
     }
@@ -108,10 +110,16 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         boolean found = false;
+        boolean possible = child1.hasNext() && child2.hasNext();
+        if(!possible) {
+            return null;
+        }
         if(next == null && child1.hasNext()) {
             next = child1.next();
         }
+        //System.out.println("Child2.hasNext() = " + child2.hasNext() + " child1.hasNext() = " + child1.hasNext() + "next == " + next);
         while(!found) {
+            //What about when child2 has tuples but child1 doesn't
             if(!child2.hasNext()) {
                 child2.rewind();
                 if(child1.hasNext()) {
@@ -121,7 +129,10 @@ public class Join extends Operator {
                 }
             }
             Tuple secondTuple = child2.next();
-            if(p.filter(next, secondTuple)) {
+            if(next == null) {
+                System.out.println("child1 gives a null tuple. Child1 is " + child1);
+            }
+            if(next != null && p.filter(next, secondTuple)) {
                 TupleDesc combined = this.getTupleDesc();
                 Tuple tuple = new Tuple(combined);
                 int index = 0;

@@ -6,16 +6,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Queue;
+import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 
-import simpledb.Operator;
-import simpledb.Database;
-import simpledb.OpIterator;
-import simpledb.QueryPlanVisualizer;
+import simpledb.*;
 
 import simpledb.parallel.Exchange.ParallelOperatorID;
 
@@ -49,33 +48,44 @@ public class Worker {
      * */
     public class WorkingThread extends Thread {
         public void run() {
+            System.out.println("Run is called");
             while (true) {
                 OpIterator query = null;
-                // synchronized (Worker.this) {
+                //synchronized (Worker.this) {
                 query = Worker.this.queryPlan;
                 // }
                 if (query != null) {
-                    // try {
-                    // some code goes here
-                    //} catch (DbException e1) {
-                    //    e1.printStackTrace();
-                    //} catch (TransactionAbortedException e1) {
-                    //    e1.printStackTrace();
-                    //} catch (InterruptedException e) {
-                    // e.printStackTrace();
-                    // }
+                     try {
+                         System.out.println("Came to run of query");
+                       if(query instanceof CollectProducer) {
+                           System.out.println("Is an instance of Collect Producer");
+                           CollectProducer query1 = (CollectProducer) query;
+                           query1.open();
+                           query1.fetchNext();
+                           query1.close();
+                       }
+
+                    } catch (DbException e1) {
+                        e1.printStackTrace();
+                    } catch (TransactionAbortedException e1) {
+                        e1.printStackTrace();
+                    }
+                    System.out.println("Calling Finish Query from run");
                     Worker.this.finishQuery();
                 }
 
                 synchronized (Worker.this.workingThread) {
                     try {
+                        System.out.println("Waiting");
                         // wait until a query plan is received
                         Worker.this.workingThread.wait();
                     } catch (InterruptedException e) {
                         break;
                     }
                 }
+                System.out.println("Going into second iteration of loop");
             }
+            System.out.println("Leaves loop");
         }
     }
 
@@ -132,7 +142,7 @@ public class Worker {
 
     public void start() throws IOException {
         acceptor.bind(new InetSocketAddress(host, port));
-
+        Worker.this.workingThread.start();
         // You need to implement for Lab 6: Make sure to start the worker thread.
     }
 
@@ -216,6 +226,46 @@ public class Worker {
      * */
     public void localizeQueryPlan(OpIterator queryPlan) {
         // some code goes here
+        System.out.println("Came to Localize Query Plan");
+        System.out.println("queryPlan = " + queryPlan);
+        Worker.this.queryPlan = queryPlan;
+        Queue<OpIterator> children = new LinkedList<OpIterator>();
+        children.add(queryPlan);
+        try {
+            while(!children.isEmpty()) {
+                OpIterator queryOption = children.remove();
+                if(queryOption instanceof SeqScan) {
+                    //System.out.println("Is an instance of SeqScan 123");
+                    SeqScan sequential = (SeqScan) queryOption;
+
+                    String tableName = sequential.getTableName();
+                    //System.out.println("TableName = " + tableName);
+                    int tableId = Database.getCatalog().getTableId(tableName);
+                    //System.out.println("TableId = " + tableId);
+                    sequential.reset(tableId, sequential.getAlias());
+                } else if(queryOption instanceof Producer) {
+                    //System.out.println("Is an instance of Producer");
+                    Producer producer = (Producer) queryOption;
+                    producer.setThisWorker(Worker.this);
+                } else if(queryOption instanceof Consumer) {
+                    //System.out.println("Is an instance of Consumer");
+                    Consumer consumer = (Consumer) queryOption;
+                    this.inBuffer.put(consumer.getOperatorID(), new LinkedBlockingQueue<ExchangeMessage>());
+                    consumer.setBuffer(inBuffer.get(consumer.getOperatorID()));
+                }
+                if(queryOption instanceof Operator) {
+                    //System.out.println("Adding Children");
+                    Operator operator = (Operator) queryOption;
+                    OpIterator[] childrenArray = operator.getChildren();
+                    for(int i = 0; i < childrenArray.length; i ++) {
+                        children.add(childrenArray[i]);
+                    }
+                    //System.out.println("Finished adding children");
+                }
+            }
+        } catch(Exception e) {
+            System.out.println("Error thrown at Localize Query plan " + e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -228,9 +278,17 @@ public class Worker {
                                                   ArrayList<ParallelOperatorID> oIds) {
         if (root instanceof Consumer)
             oIds.add(((Consumer) root).getOperatorID());
-        if (root instanceof Operator)
-            for (OpIterator c : ((Operator) root).getChildren())
+        if(root instanceof ShuffleConsumer)
+            System.out.println("Shuffle Consumer instance = " + ((ShuffleConsumer)root).getName() + ((Consumer)root).getOperatorID());
+        if(root instanceof CollectConsumer)
+            System.out.println("Collect Consumer instance = " + ((CollectConsumer)root).getName() + ((Consumer)root).getOperatorID());
+        if (root instanceof Operator) {
+            System.out.println(((Operator) root).getChildren());
+            for (OpIterator c : ((Operator) root).getChildren()) {
+                System.out.println(c == null);
                 collectConsumerOperatorIDs(c, oIds);
+            }
+        }
     }
 
     /**
@@ -243,6 +301,7 @@ public class Worker {
         synchronized (Worker.this.workingThread) {
             Worker.this.workingThread.notifyAll();
         }
+        //this.workingThread.run();
     }
 
     /**
@@ -274,6 +333,7 @@ public class Worker {
         collectConsumerOperatorIDs(query, ids);
         Worker.this.inBuffer.clear();
         for (ParallelOperatorID id : ids) {
+            System.out.println("Putting into map id = " + id);
             Worker.this.inBuffer.put(id,
                     new LinkedBlockingQueue<ExchangeMessage>());
         }
@@ -286,6 +346,7 @@ public class Worker {
      * This method should be called when a data item is received
      * */
     public void receiveData(ExchangeMessage data) {
+        System.out.println("Map = " + Worker.this.inBuffer);
         if (data instanceof TupleBag)
             System.out.println("TupleBag received from " + data.getWorkerID()
                     + " to Operator: " + data.getOperatorID());
@@ -294,7 +355,14 @@ public class Worker {
                     + " to Operator: " + data.getOperatorID());
         LinkedBlockingQueue<ExchangeMessage> q = null;
         q = Worker.this.inBuffer.get(data.getOperatorID());
-
+        if(data == null) {
+            System.out.println("Data is null");
+        }
+        if(q == null) {
+            System.out.println("Data.getOperatorID = " + data.getOperatorID());
+            System.out.println("Contains? " + Worker.this.inBuffer.containsKey(data.getOperatorID()));
+            System.out.println("Queue of messages is null");
+        }
         q.offer(data);
     }
 

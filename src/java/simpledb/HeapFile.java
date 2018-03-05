@@ -163,7 +163,7 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
-        return new DbFileIterator() {
+        return new HeapFileIterator(tid);/*DbFileIterator() {
             HeapPage page;
             Iterator<Tuple> tupleIterator;
             int pageNumber;
@@ -219,7 +219,70 @@ public class HeapFile implements DbFile {
                 tupleIterator = null;
                 pageNumber = 0;
             }
-        };
+        };*/
+    }
+
+    private class HeapFileIterator implements DbFileIterator, Serializable {
+        transient HeapPage page;
+        transient Iterator<Tuple> tupleIterator;
+        int pageNumber;
+        TransactionId tid;
+
+        HeapFileIterator(TransactionId tid) {
+            this.tid = tid;
+        }
+        @Override
+        public void open() throws DbException, TransactionAbortedException {
+            pageNumber = 0;
+            HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
+            page = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
+            tupleIterator = page.iterator();
+        }
+
+        @Override
+        public boolean hasNext() throws DbException, TransactionAbortedException {
+            if(page == null || tupleIterator == null) {
+                return false;
+            }
+            if(tupleIterator.hasNext()) {
+                return true;
+            } else {
+                while(pageNumber < numPages() - 1) {
+                    pageNumber ++;
+                    HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
+                    page = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
+                    tupleIterator = page.iterator();
+                    if(tupleIterator.hasNext()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        @Override
+        public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+            if(hasNext()) {
+                return tupleIterator.next();
+            } else {
+                throw new NoSuchElementException("No elements found to return");
+            }
+        }
+
+        @Override
+        public void rewind() throws DbException, TransactionAbortedException {
+            pageNumber = 0;
+            HeapPageId heapPageId = new HeapPageId(getId(), pageNumber);
+            page = (HeapPage) Database.getBufferPool().getPage(tid, heapPageId, Permissions.READ_ONLY);
+            tupleIterator = page.iterator();
+        }
+
+        @Override
+        public void close() {
+            page = null;
+            tupleIterator = null;
+            pageNumber = 0;
+        }
     }
 
 }
