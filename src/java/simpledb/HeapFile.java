@@ -14,7 +14,7 @@ import java.util.*;
  * @see simpledb.HeapPage#HeapPage
  * @author Sam Madden
  */
-public class HeapFile implements DbFile {
+public class HeapFile implements DbFile, Serializable {
 
     private File file;
     private TupleDesc td;

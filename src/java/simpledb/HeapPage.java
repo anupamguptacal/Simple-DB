@@ -11,7 +11,7 @@ import java.io.*;
  * @see BufferPool
  *
  */
-public class HeapPage implements Page {
+public class HeapPage implements Page, Serializable {
 
     final HeapPageId pid;
     final TupleDesc td;
