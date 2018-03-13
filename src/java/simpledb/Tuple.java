@@ -14,8 +14,8 @@ import java.util.ArrayList;
 public class Tuple implements Serializable {
 
     List<Field> listOfItems;
-    TupleDesc tupleDesc;
-    RecordId recordId;
+    transient TupleDesc tupleDesc;
+    transient RecordId recordId;
     private static final long serialVersionUID = 1L;
 
     /**
