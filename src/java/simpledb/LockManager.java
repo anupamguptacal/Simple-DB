@@ -2,11 +2,12 @@ package simpledb;
 import java.util.*;
 import java.util.Map.Entry;
 
+//Anupam Gupta
 public class LockManager {
 
-     Map<PageId, TransactionId> exclusiveLock;
-     Map<PageId, Set<TransactionId>> readLock;
-     Map<TransactionId, Set<TransactionId>> dependencyMapping;
+    Map<PageId, TransactionId> exclusiveLock;
+    Map<PageId, Set<TransactionId>> readLock;
+    Map<TransactionId, Set<TransactionId>> dependencyMapping;
 
     public LockManager() {
         exclusiveLock = new HashMap<PageId, TransactionId>();

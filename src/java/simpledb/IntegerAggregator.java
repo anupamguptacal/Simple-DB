@@ -56,7 +56,15 @@ public class IntegerAggregator implements Aggregator {
         returnedValue = false;
         iterator = null;
         averageStorer = new HashMap<Field, Integer>();
-        if(this.gbfield != NO_GROUPING) {
+        /*if(this.gbfield != NO_GROUPING) {
+            if(what == Op.SUM_COUNT) {
+                Type[] array = new Type[3];
+                array[0] = gbfieldType;
+                array[1] = Type.INT_TYPE;
+                array[2] = Type.INT_TYPE;
+                String[] nameArray = new String[2];
+                nameArray[0] =
+            }
             Type[] array = new Type[2];
             array[0] = gbfieldType;
             array[1] = Type.INT_TYPE;
@@ -72,7 +80,7 @@ public class IntegerAggregator implements Aggregator {
             nameArray[0] = what.toString() + "(" + aggregateColumn + ")";
             desc = new TupleDesc(array, nameArray);
             tuple = new Tuple(desc);
-        }
+        }*/
     }
 
     /**
@@ -83,41 +91,71 @@ public class IntegerAggregator implements Aggregator {
      *            the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
+        if(what == Op.SUM) {
+            System.out.println("Called Sum for tuple = " + tup.toString() + " with tuple description = " + tup.getTupleDesc());
+        }
+        //System.out.println("Called Merge Into Tuple with operator = " + what);
         aggregateColumn = tup.getTupleDesc().getFieldName(this.afield);
         if(this.gbfield != NO_GROUPING) {
-            Field value = tup.getField(this.gbfield);
-            Field aggregate = tup.getField(this.afield);
-            int aggregate_value = Integer.valueOf(aggregate.toString());
-            if(!storage.containsKey(value)) {
-                if(what == Op.COUNT) {
-                    storage.put(value, 1);
-                } else if(what == Op.AVG) {
-                    storage.put(value, aggregate_value);
-                    countStorer.put(value, 1);
-                }
-                else {
-                    storage.put(value, aggregate_value);
+            if (what == Op.SC_AVG) {
+                Field groupByField = tup.getField(0);
+                Field sum = tup.getField(1);
+                Field count = tup.getField(2);
+                if (!storage.containsKey(groupByField)) {
+                    storage.put(groupByField, Integer.parseInt(sum.toString()));
+                    countStorer.put(groupByField, Integer.parseInt(count.toString()));
+                } else {
+                    storage.put(groupByField, storage.get(groupByField) + Integer.parseInt(sum.toString()));
+                    countStorer.put(groupByField, countStorer.get(groupByField) + Integer.parseInt(count.toString()));
                 }
             } else {
-                Integer stored_val = storage.get(value);
-                if(what == Op.MIN) {
-                    if(stored_val > aggregate_value) {
+                Field value = tup.getField(this.gbfield);
+                Field aggregate = tup.getField(this.afield);
+                int aggregate_value = Integer.valueOf(aggregate.toString());
+                if (!storage.containsKey(value)) {
+                    if (what == Op.COUNT) {
+                        storage.put(value, 1);
+                    } else if (what == Op.AVG || what == Op.SUM_COUNT) {
+                        storage.put(value, aggregate_value);
+                        countStorer.put(value, 1);
+                    } else {
                         storage.put(value, aggregate_value);
                     }
-                } else if( what == Op.MAX) {
-                    if(stored_val < aggregate_value) {
-                        storage.put(value, aggregate_value);
+                } else {
+                    Integer stored_val = storage.get(value);
+                    if (what == Op.MIN) {
+                        if (stored_val > aggregate_value) {
+                            storage.put(value, aggregate_value);
+                        }
+                    } else if (what == Op.MAX) {
+                        if (stored_val < aggregate_value) {
+                            storage.put(value, aggregate_value);
+                        }
+                    } else if (what == Op.SUM) {
+                        System.out.println("Value to add = " + value);
+                        System.out.println("What needs to be added? " + aggregate_value);
+                        storage.put(value, stored_val + aggregate_value);
+                    } else if (what == Op.COUNT) {
+                        storage.put(value, storage.get(value) + 1);
+                    } else if (what == Op.AVG || what == Op.SUM_COUNT) {
+                        storage.put(value, stored_val + aggregate_value);
+                        countStorer.put(value, countStorer.get(value) + 1);
                     }
-                } else if(what == Op.SUM) {
-                    storage.put(value, stored_val + aggregate_value);
-                } else if(what == Op.COUNT) {
-                    storage.put(value, storage.get(value) + 1);
-                } else if(what == Op.AVG) {
-                    storage.put(value, stored_val + aggregate_value);
-                    countStorer.put(value, countStorer.get(value) + 1);
                 }
             }
         } else {
+            if(what == Op.SC_AVG) {
+                int sum = Integer.parseInt(tup.getField(0).toString());
+                int count = Integer.parseInt(tup.getField(1).toString());
+                if(!initialized) {
+                    nonGroupStore = sum;
+                    totalNumber = count;
+                    initialized = true;
+                } else {
+                    nonGroupStore += sum;
+                    totalNumber += count;
+                }
+            }
             Field aggregate = tup.getField(this.afield);
             int aggregate_value = Integer.valueOf(aggregate.toString());
             if(!initialized) {
@@ -141,7 +179,7 @@ public class IntegerAggregator implements Aggregator {
                     nonGroupStore += aggregate_value;
                 } else if(what == Op.COUNT) {
                     nonGroupStore += 1;
-                } else if(what == Op.AVG) {
+                } else if(what == Op.AVG || what == Op.SUM_COUNT) {
                     nonGroupStore += aggregate_value;
                     totalNumber += 1;
                 }
@@ -158,13 +196,54 @@ public class IntegerAggregator implements Aggregator {
      *         the constructor.
      */
     public OpIterator iterator() {
+        //System.out.println(aggregateColumn == null);
+        Type[] array;
+        String[] nameArray;
+        if(this.gbfield != NO_GROUPING) {
+            if(what == Op.SUM_COUNT) {
+                array = new Type[3];
+                array[0] = gbfieldType;
+                array[1] = Type.INT_TYPE;
+                array[2] = Type.INT_TYPE;
+                nameArray = new String[3];
+                nameArray[0] = "groupValue";
+                nameArray[1] = Op.SUM.toString();// + "(" + aggregateColumn + ")";
+                nameArray[2] = Op.COUNT.toString();// + "(" + aggregateColumn + ")";
+            } else {
+                array = new Type[2];
+                array[0] = gbfieldType;
+                array[1] = Type.INT_TYPE;
+                nameArray = new String[2];
+                nameArray[0] = "groupValue";
+                nameArray[1] = what.toString();// + "(" + aggregateColumn + ")";
+            }
+            desc = new TupleDesc(array, nameArray);
+            tuple = new Tuple(desc);
+        } else {
+            if(what == Op.SUM_COUNT) {
+                array = new Type[2];
+                array[0] = Type.INT_TYPE;
+                array[1] = Type.INT_TYPE;
+                nameArray = new String[2];
+                nameArray[0] = Op.SUM.toString();// + "(" + aggregateColumn + ")";
+                nameArray[1] = Op.COUNT.toString();// + "(" + aggregateColumn + ")";
+            } else {
+                array = new Type[1];
+                array[0] = Type.INT_TYPE;
+                nameArray = new String[1];
+                nameArray[0] = what.toString();// + "(" + aggregateColumn + ")";
+            }
+            desc = new TupleDesc(array, nameArray);
+            tuple = new Tuple(desc);
+        }
         return new OpIterator() {
             boolean openFlag = false;
+
             @Override
             public void open() throws DbException, TransactionAbortedException {
                 openFlag = true;
                 returnedValue = false;
-                if (what == Op.AVG) {
+                if (what == Op.AVG || what == Op.SC_AVG) {
                     if (gbfield != NO_GROUPING) {
                         for (Map.Entry<Field, Integer> entry : storage.entrySet()) {
                             int numberOfOccurences = countStorer.get(entry.getKey());
@@ -179,6 +258,7 @@ public class IntegerAggregator implements Aggregator {
                     if(what == Op.AVG) {
                         iterator = averageStorer.keySet().iterator();
                     } else {
+                        System.out.println("Number of entries in storage map " + storage);
                         iterator = storage.keySet().iterator();
                     }
                 }
@@ -199,19 +279,39 @@ public class IntegerAggregator implements Aggregator {
             @Override
             public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
                 if(hasNext()) {
+                    tuple = new Tuple(desc);
                     if (gbfield == NO_GROUPING) {
-                        tuple.setField(0, new IntField(nonGroupStore));
+                        if(what == Op.SUM_COUNT) {
+                            tuple.setField(0, new IntField(nonGroupStore));
+                            tuple.setField(1, new IntField(totalNumber));
+                        } else {
+                            tuple.setField(0, new IntField(nonGroupStore));
+                        }
                         returnedValue = true;
                     } else {
                         Field key = iterator.next();
                         int value;
-                        if(what == Op.AVG) {
-                            value = averageStorer.get(key);
+                        if(what == Op.SUM_COUNT) {
+                            int count = countStorer.get(key);
+                            int sum = storage.get(key);
+                            tuple.setField(0, key);
+                            tuple.setField(1, new IntField(sum));
+                            tuple.setField(2, new IntField(count));
                         } else {
-                            value = storage.get(key);
+                            if (what == Op.AVG || what == Op.SC_AVG) {
+                                value = averageStorer.get(key);
+                            } else {
+                                value = storage.get(key);
+                            }
+                            System.out.println("Adding key = " + key);
+                            tuple.setField(0, key);
+                            System.out.println("Adding value = " + value);
+                            tuple.setField(1, new IntField(value));
                         }
-                        tuple.setField(0, key);
-                        tuple.setField(1, new IntField(value));
+                    }
+                    Tuple toReturnTuple = tuple;
+                    if(what == Op.COUNT) {
+                        System.out.println("For Count returning tuple = " + tuple);
                     }
                     return tuple;
                 } else {
@@ -223,7 +323,11 @@ public class IntegerAggregator implements Aggregator {
             public void rewind() throws DbException, TransactionAbortedException {
                 returnedValue = false;
                 if(gbfield != NO_GROUPING) {
-                    iterator = storage.keySet().iterator();
+                    if(what == Op.AVG || what == Op.SC_AVG) {
+                        iterator = averageStorer.keySet().iterator();
+                    } else {
+                        iterator = storage.keySet().iterator();
+                    }
                 }
                 tuple = new Tuple(desc);
             }

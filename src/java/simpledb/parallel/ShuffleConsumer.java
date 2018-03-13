@@ -12,12 +12,12 @@ import simpledb.TupleDesc;
 
 /**
  * The consumer part of the Shuffle Exchange operator.
- * 
+ *
  * A ShuffleProducer operator sends tuples to all the workers according to some
  * PartitionFunction, while the ShuffleConsumer (this class) encapsulates the
  * methods to collect the tuples received at the worker from multiple source
  * workers' ShuffleProducer.
- * 
+ * Anupam Gupta
  * */
 public class ShuffleConsumer extends Consumer {
 
@@ -41,7 +41,7 @@ public class ShuffleConsumer extends Consumer {
     }
 
     public ShuffleConsumer(ShuffleProducer child,
-            ParallelOperatorID operatorID, SocketInfo[] workers) {
+                           ParallelOperatorID operatorID, SocketInfo[] workers) {
         super(operatorID);
         this.child = child;
         this.operatorID = operatorID;
@@ -66,8 +66,8 @@ public class ShuffleConsumer extends Consumer {
 
     @Override
     public void rewind() throws DbException, TransactionAbortedException {
-       this.tuples = null;
-       this.innerBufferIndex = 0;
+        this.tuples = null;
+        this.innerBufferIndex = 0;
     }
 
     @Override
@@ -82,17 +82,17 @@ public class ShuffleConsumer extends Consumer {
 
     @Override
     public TupleDesc getTupleDesc() {
-        if (this.child!=null)
+        if (this.child != null)
             return this.child.getTupleDesc();
         else
             return this.td;
     }
 
     /**
-     * 
+     *
      * Retrieve a batch of tuples from the buffer of ExchangeMessages. Wait if
      * the buffer is empty.
-     * 
+     *
      * @return Iterator over the new tuples received from the source workers.
      *         Return <code>null</code> if all source workers have sent an end
      *         of file message.
@@ -101,12 +101,12 @@ public class ShuffleConsumer extends Consumer {
         TupleBag tb = null;
         Iterator<Tuple> toReturn = null;
         if (this.innerBufferIndex < this.innerBuffer.size()) {
-           toReturn = this.innerBuffer.get(this.innerBufferIndex++).iterator();
+           /*toReturn = this.innerBuffer.get(this.innerBufferIndex++).iterator();
             while(toReturn.hasNext()) {
                 if(toReturn.next() == null) {
                     System.out.println("One of the tuples returned from Shuffle Consumer is null");
                 }
-            }
+            }*/
             return this.innerBuffer.get(this.innerBufferIndex++).iterator();
         }
 
@@ -118,11 +118,11 @@ public class ShuffleConsumer extends Consumer {
                 innerBuffer.add(tb);
                 this.innerBufferIndex++;
                 toReturn = tb.iterator();
-                while(toReturn.hasNext()) {
+                /*while(toReturn.hasNext()) {
                     if(toReturn.next() == null) {
                         System.out.println("One of the tuples returned from Shuffle Consumer is null");
                     }
-                }
+                }*/
                 return tb.iterator();
             }
         }

@@ -346,7 +346,7 @@ public class Worker {
      * This method should be called when a data item is received
      * */
     public void receiveData(ExchangeMessage data) {
-        System.out.println("Map = " + Worker.this.inBuffer);
+        //System.out.println("Map = " + Worker.this.inBuffer);
         if (data instanceof TupleBag)
             System.out.println("TupleBag received from " + data.getWorkerID()
                     + " to Operator: " + data.getOperatorID());

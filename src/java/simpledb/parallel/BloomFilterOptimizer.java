@@ -48,7 +48,7 @@ public class BloomFilterOptimizer extends ParallelQueryPlanOptimizer {
 
     @Override
     protected void doMyOptimization(TransactionId tid,ParallelQueryPlan plan) {
-        insertBloomFilter(tid,plan);
+        //insertBloomFilter(tid,plan);
     }
  
     /**

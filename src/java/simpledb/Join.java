@@ -4,13 +4,17 @@ import java.util.*;
 
 /**
  * The Join operator implements the relational join operation.
+ * Anupam Gupta
  */
 public class Join extends Operator {
 
     private OpIterator child1;
     private OpIterator child2;
     private JoinPredicate p;
-    private Tuple next;
+    private List<Tuple> joinedTuples;
+    // private Tuple next;
+    private boolean computed;
+    private Iterator<Tuple> tuplesIterator;
     private static final long serialVersionUID = 1L;
 
     /**
@@ -28,7 +32,10 @@ public class Join extends Operator {
         this.child1 = child1;
         this.child2 = child2;
         this.p = p;
-        this.next = null;
+        this.joinedTuples = new ArrayList<Tuple>();
+        //this.next = null;
+        computed = false;
+        tuplesIterator = null;
     }
 
     public JoinPredicate getJoinPredicate() {
@@ -55,8 +62,6 @@ public class Join extends Operator {
     public String getJoinField2Name() {
         int number = p.getField2();
         TupleDesc t  = child2.getTupleDesc();
-        System.out.println("t = " + t);
-        System.out.println("Number = " + number);
         String name = t.getFieldName(number);
         return name;
     }
@@ -74,20 +79,26 @@ public class Join extends Operator {
         super.open();
         this.child1.open();
         this.child2.open();
-        this.next = null;
+        //this.next = null;
+        this.computed = false;
+        this.joinedTuples = new ArrayList<Tuple>();
+        tuplesIterator = null;
     }
 
     public void close() {
         super.close();
         this.child1.close();
         this.child2.close();
-        this.next = null;
+        //this.next = null;
+        this.computed = false;
+        this.joinedTuples = null;
+        tuplesIterator = null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         this.child1.rewind();
         this.child2.rewind();
-        this.next = null;
+        //this.next = null;
     }
 
     /**
@@ -109,6 +120,40 @@ public class Join extends Operator {
      * @see JoinPredicate#filter
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
+        if(!computed) {
+            List<Tuple> tuplesFromFirstRelation = new ArrayList<Tuple>();
+            List<Tuple> tuplesFromSecondRelation = new ArrayList<Tuple>();
+            while(child1.hasNext()) {
+                tuplesFromFirstRelation.add(child1.next());
+            }
+            while(child2.hasNext()) {
+                tuplesFromSecondRelation.add(child2.next());
+            }
+            for(Tuple tuple : tuplesFromFirstRelation) {
+                for(Tuple secondTuple : tuplesFromSecondRelation) {
+                    if(p.filter(tuple, secondTuple)) {
+                        TupleDesc combined = this.getTupleDesc();
+                        Tuple combinedTuple = new Tuple(combined);
+                        int index = 0;
+                        for(int i = 0; i < tuple.getTupleDesc().numFields(); i++) {
+                            combinedTuple.setField(index++, tuple.getField(i));
+                        }
+                        for(int j = 0; j < secondTuple.getTupleDesc().numFields(); j++) {
+                            combinedTuple.setField(index++, secondTuple.getField(j));
+                        }
+                        this.joinedTuples.add(combinedTuple);
+                    }
+                }
+            }
+            computed = true;
+            this.tuplesIterator = joinedTuples.iterator();
+        }
+        if(this.tuplesIterator.hasNext()) {
+            return this.tuplesIterator.next();
+        } else {
+            return null;
+        }
+        /*
         boolean found = false;
         boolean possible = child1.hasNext() && child2.hasNext();
         if(!possible) {
@@ -146,6 +191,7 @@ public class Join extends Operator {
             }
         }
         return null;
+        */
     }
 
     @Override

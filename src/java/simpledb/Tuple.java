@@ -90,10 +90,12 @@ public class Tuple implements Serializable {
      */
     public String toString() {
         String result = "";
-        for(int i = 0; i < listOfItems.size() - 1; i++) {
-            result += listOfItems.get(i).toString() + " ";
+        if(listOfItems.size() > 0) {
+            for (int i = 0; i < listOfItems.size() - 1; i++) {
+                result += listOfItems.get(i).toString() + " ";
+            }
+            result += listOfItems.get(listOfItems.size() - 1).toString();
         }
-        result += listOfItems.get(listOfItems.size() - 1).toString();
         return result;
     }
 

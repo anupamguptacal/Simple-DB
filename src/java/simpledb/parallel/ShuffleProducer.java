@@ -11,11 +11,11 @@ import java.util.ArrayList;
 
 /**
  * The producer part of the Shuffle Exchange operator.
- * 
+ *
  * ShuffleProducer distributes tuples to the workers according to some
  * partition function (provided as a PartitionFunction object during the
  * ShuffleProducer's instantiation).
- * 
+ * Anupam Gupta
  * */
 public class ShuffleProducer extends Producer {
 
@@ -24,7 +24,7 @@ public class ShuffleProducer extends Producer {
     private ParallelOperatorID operatorID;
     private SocketInfo[] workers;
     private PartitionFunction<?, ?> pf;
-    private transient WorkingThread runningThread;
+    private WorkingThread runningThread;
 
     public String getName() {
         return "shuffle_p";
@@ -44,7 +44,7 @@ public class ShuffleProducer extends Producer {
     }
 
     public SocketInfo[] getWorkers() {
-       return this.workers;
+        return this.workers;
     }
 
     public PartitionFunction<?, ?> getPartitionFunction() {
@@ -59,7 +59,7 @@ public class ShuffleProducer extends Producer {
             System.out.println("Workers.length = " + ShuffleProducer.this.workers.length);
             for(int i = 0; i < ShuffleProducer.this.workers.length; i++) {
                 IoSession session = ParallelUtility.createSession(
-                       ShuffleProducer.this.workers[i].getAddress(),
+                        ShuffleProducer.this.workers[i].getAddress(),
                         ShuffleProducer.this.getThisWorker().minaHandler, -1);
                 sessions[i] = session;
             }
@@ -128,14 +128,14 @@ public class ShuffleProducer extends Producer {
                 System.out.println("DbException thrown by Shuffle Producer " + e.getLocalizedMessage());
             } catch (TransactionAbortedException e) {
                 e.printStackTrace();
-                System.out.println("TransactionAbortedException thown by Shuffle Producer = " + e.getLocalizedMessage());
+                System.out.println("TransactionAbortedException thrown by Shuffle Producer = " + e.getLocalizedMessage());
             }
         }
     }
 
     @Override
     public void open() throws DbException, TransactionAbortedException {
-       this.child.open();
+        this.child.open();
         this.runningThread = new WorkingThread();
         this.runningThread.start();
         super.open();
