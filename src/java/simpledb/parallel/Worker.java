@@ -226,8 +226,8 @@ public class Worker {
      * */
     public void localizeQueryPlan(OpIterator queryPlan) {
         // some code goes here
-        System.out.println("Came to Localize Query Plan");
-        System.out.println("queryPlan = " + queryPlan);
+        //System.out.println("Came to Localize Query Plan");
+        //System.out.println("queryPlan = " + queryPlan);
         Worker.this.queryPlan = queryPlan;
         Queue<OpIterator> children = new LinkedList<OpIterator>();
         children.add(queryPlan);
@@ -278,12 +278,12 @@ public class Worker {
                                                   ArrayList<ParallelOperatorID> oIds) {
         if (root instanceof Consumer)
             oIds.add(((Consumer) root).getOperatorID());
-        if(root instanceof ShuffleConsumer)
+        /*if(root instanceof ShuffleConsumer)
             System.out.println("Shuffle Consumer instance = " + ((ShuffleConsumer)root).getName() + ((Consumer)root).getOperatorID());
         if(root instanceof CollectConsumer)
-            System.out.println("Collect Consumer instance = " + ((CollectConsumer)root).getName() + ((Consumer)root).getOperatorID());
+            System.out.println("Collect Consumer instance = " + ((CollectConsumer)root).getName() + ((Consumer)root).getOperatorID());*/
         if (root instanceof Operator) {
-            System.out.println(((Operator) root).getChildren());
+            //System.out.println(((Operator) root).getChildren());
             for (OpIterator c : ((Operator) root).getChildren()) {
                 System.out.println(c == null);
                 collectConsumerOperatorIDs(c, oIds);
@@ -333,7 +333,7 @@ public class Worker {
         collectConsumerOperatorIDs(query, ids);
         Worker.this.inBuffer.clear();
         for (ParallelOperatorID id : ids) {
-            System.out.println("Putting into map id = " + id);
+           // System.out.println("Putting into map id = " + id);
             Worker.this.inBuffer.put(id,
                     new LinkedBlockingQueue<ExchangeMessage>());
         }
