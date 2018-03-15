@@ -91,10 +91,6 @@ public class IntegerAggregator implements Aggregator {
      *            the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
-        if(what == Op.SUM) {
-            System.out.println("Called Sum for tuple = " + tup.toString() + " with tuple description = " + tup.getTupleDesc());
-        }
-        //System.out.println("Called Merge Into Tuple with operator = " + what);
         aggregateColumn = tup.getTupleDesc().getFieldName(this.afield);
         if(this.gbfield != NO_GROUPING) {
             if (what == Op.SC_AVG) {
@@ -132,8 +128,6 @@ public class IntegerAggregator implements Aggregator {
                             storage.put(value, aggregate_value);
                         }
                     } else if (what == Op.SUM) {
-                        System.out.println("Value to add = " + value);
-                        System.out.println("What needs to be added? " + aggregate_value);
                         storage.put(value, stored_val + aggregate_value);
                     } else if (what == Op.COUNT) {
                         storage.put(value, storage.get(value) + 1);
@@ -196,7 +190,6 @@ public class IntegerAggregator implements Aggregator {
      *         the constructor.
      */
     public OpIterator iterator() {
-        //System.out.println(aggregateColumn == null);
         Type[] array;
         String[] nameArray;
         if(this.gbfield != NO_GROUPING) {
@@ -258,7 +251,6 @@ public class IntegerAggregator implements Aggregator {
                     if(what == Op.AVG) {
                         iterator = averageStorer.keySet().iterator();
                     } else {
-                        System.out.println("Number of entries in storage map " + storage);
                         iterator = storage.keySet().iterator();
                     }
                 }
@@ -303,15 +295,9 @@ public class IntegerAggregator implements Aggregator {
                             } else {
                                 value = storage.get(key);
                             }
-                            System.out.println("Adding key = " + key);
                             tuple.setField(0, key);
-                            System.out.println("Adding value = " + value);
                             tuple.setField(1, new IntField(value));
                         }
-                    }
-                    Tuple toReturnTuple = tuple;
-                    if(what == Op.COUNT) {
-                        System.out.println("For Count returning tuple = " + tuple);
                     }
                     return tuple;
                 } else {

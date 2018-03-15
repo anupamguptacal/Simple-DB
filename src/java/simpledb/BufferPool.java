@@ -149,17 +149,13 @@ public class BufferPool {
      */
     public synchronized void transactionComplete(TransactionId tid, boolean commit)
             throws IOException {
-        //synchronized (pageMap) {
         if (commit) {
             for (Entry<PageId, Page> entry : pageMap.entrySet()) {
-                //if(entry.getValue().isDirty() != null && entry.getValue().isDirty().equals(tid)) {
-                // flushPage(entry.getKey());
                 if (holdsLock(tid, entry.getKey())) {
                     Database.getLogFile().logWrite(tid, entry.getValue().getBeforeImage(), entry.getValue());
                     Database.getLogFile().force();
                     entry.getValue().setBeforeImage();
                 }
-                //}
             }
         } else {
             for (Entry<PageId, Page> entry : pageMap.entrySet()) {
@@ -170,13 +166,8 @@ public class BufferPool {
                 }
             }
         }
-        /*for(Entry<PageId, Page> entry : pageMap.entrySet()) {
-            this.lockManager.releaseExclusiveLock(entry.getKey(), tid);
-            this.lockManager.releaseReadLock(entry.getKey(), tid);
-        }*/
         this.lockManager.releaseTransaction(tid);
         this.lockManager.removeFromDependency(tid);
-        //}
     }
 
 
@@ -197,7 +188,6 @@ public class BufferPool {
      */
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
-        //synchronized (pageMap) {
         HeapFile file = (HeapFile) Database.getCatalog().getDatabaseFile(tableId);
         ArrayList<Page> changed = file.insertTuple(tid, t);
         for (Page page : changed) {
@@ -209,7 +199,6 @@ public class BufferPool {
                 pageMap.put(page.getId(), page);
             }
         }
-        //}
     }
 
     /**
@@ -227,7 +216,6 @@ public class BufferPool {
      */
     public void deleteTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
-        //synchronized (pageMap) {
         HeapFile file = (HeapFile) Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
         ArrayList<Page> changed = file.deleteTuple(tid, t);
         for (Page page : changed) {
@@ -235,7 +223,6 @@ public class BufferPool {
             evictPage();
             pageMap.put(page.getId(), page);
         }
-        //}
     }
 
 
@@ -245,11 +232,9 @@ public class BufferPool {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        //synchronized (pageMap) {
         for (PageId pageId : pageMap.keySet()) {
             flushPage(pageId);
         }
-        //}
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -269,7 +254,6 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized void flushPage(PageId pid) throws IOException {
-        //synchronized (pageMap) {
         if (pageMap.containsKey(pid)) {
             Page page = pageMap.get(pid);
             if (page.isDirty() != null) {
@@ -283,7 +267,6 @@ public class BufferPool {
                 page.markDirty(false, null);
             }
         }
-        //}
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -304,15 +287,6 @@ public class BufferPool {
                 int randomNumber = (int) (Math.random() * (pageMap.size() - 1));
                 ArrayList<PageId> arrayList = new ArrayList<PageId>(pageMap.keySet());
                 PageId pageId = arrayList.get(randomNumber);
-            /*PageId pageId = null;
-            for(Entry<PageId, Page> entry: pageMap.entrySet()) {
-                if(entry.getValue().isDirty() == null) {
-                    pageId = entry.getKey();
-                }
-            }
-            if(pageId == null) {
-                throw new DbException("No pages can be evicted at this point");
-            }*/
                 try {
                     flushPage(pageId);
                 } catch (IOException e) {

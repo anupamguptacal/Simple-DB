@@ -38,20 +38,17 @@ public class Aggregate extends Operator {
      *            The aggregation operator to use
      */
     public Aggregate(OpIterator child, int afield, int gfield, Aggregator.Op aop) {
-        System.out.println("Called Aggregate with operator = " + aop);
         this.child = child;
         this.afield = afield;
         this.gfield = gfield;
         this.aop = aop;
         if(this.child.getTupleDesc().getFieldType(afield).equals(Type.INT_TYPE)) {
-            //System.out.println("Calling Integer Aggregate");
             if(gfield == -1) {
                 aggregator = new IntegerAggregator(this.gfield, null, this.afield, aop);
             } else {
                 aggregator = new IntegerAggregator(this.gfield, this.child.getTupleDesc().getFieldType(this.gfield), this.afield, aop);
             }
         } else {
-            //System.out.println("Calling String Aggregator");
             if(gfield == -1) {
                 aggregator = new StringAggregator(this.gfield, null, this.afield, aop);
             } else {

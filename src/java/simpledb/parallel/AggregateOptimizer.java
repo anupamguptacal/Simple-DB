@@ -48,7 +48,6 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
 
         if (rootO instanceof Aggregate) {
             Aggregate agg = (Aggregate) rootO;
-            System.out.println("Aggregate field name before = " + agg.aggregateFieldName());
             Exchange shuffleConsumerOrCollectConsumer = (Exchange) children[0];
             Exchange shuffleProducerOrCollectProducer = (Exchange) shuffleConsumerOrCollectConsumer
                     .getChildren()[0];
@@ -72,14 +71,12 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
                 downAgg = new Aggregate(downChildProcessed,
                         agg.aggregateField(), agg.groupField(),
                         Aggregator.Op.SUM_COUNT);
-                System.out.println("Sum_Count returns = " + downAgg.getTupleDesc());
                 shuffleProducerOrCollectProducer
                         .setChildren(new OpIterator[] { downAgg });
                 upAgg = new Aggregate(shuffleConsumerOrCollectConsumer,
                         hasGroup ? 1 : 0,
                         hasGroup ? 0 : Aggregator.NO_GROUPING,
                         Aggregator.Op.SC_AVG);
-                System.out.println("SC_AVG returns = " + upAgg.getTupleDesc());
                 break;
             /**
              * replace SUM with SUM -> SUM
@@ -97,7 +94,6 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
                  * replace COUNT with COUNT -> SUM
                  * */
             case COUNT:
-                System.out.println("Came to Count in Parallel Aggregate");
                 downAgg.setChildren(new OpIterator[] { downChildProcessed });
                 shuffleProducerOrCollectProducer
                         .setChildren(new OpIterator[] { downAgg });
@@ -136,8 +132,6 @@ public class AggregateOptimizer extends ParallelQueryPlanOptimizer {
              * Add a rename operator to keep the output TupleDesc consistent
              * with the local plan
              * */
-            System.out.println("agg.aggregateFieldName = " + agg.aggregateFieldName());
-            System.out.println("upAgg tuple Description before rename = " + upAgg.getTupleDesc());
             return new Rename(hasGroup ? 1 : 0, agg.aggregateFieldName(), upAgg);
         } else {
             if (rootO instanceof Join || rootO instanceof HashEquiJoin) {

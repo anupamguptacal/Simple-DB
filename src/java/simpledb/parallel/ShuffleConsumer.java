@@ -99,14 +99,7 @@ public class ShuffleConsumer extends Consumer {
      */
     Iterator<Tuple> getTuples() throws InterruptedException {
         TupleBag tb = null;
-        Iterator<Tuple> toReturn = null;
         if (this.innerBufferIndex < this.innerBuffer.size()) {
-           /*toReturn = this.innerBuffer.get(this.innerBufferIndex++).iterator();
-            while(toReturn.hasNext()) {
-                if(toReturn.next() == null) {
-                    System.out.println("One of the tuples returned from Shuffle Consumer is null");
-                }
-            }*/
             return this.innerBuffer.get(this.innerBufferIndex++).iterator();
         }
 
@@ -117,12 +110,6 @@ public class ShuffleConsumer extends Consumer {
             } else {
                 innerBuffer.add(tb);
                 this.innerBufferIndex++;
-                toReturn = tb.iterator();
-                /*while(toReturn.hasNext()) {
-                    if(toReturn.next() == null) {
-                        System.out.println("One of the tuples returned from Shuffle Consumer is null");
-                    }
-                }*/
                 return tb.iterator();
             }
         }

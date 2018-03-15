@@ -48,7 +48,6 @@ public class Worker {
      * */
     public class WorkingThread extends Thread {
         public void run() {
-            System.out.println("Run is called");
             while (true) {
                 OpIterator query = null;
                 //synchronized (Worker.this) {
@@ -56,9 +55,7 @@ public class Worker {
                 // }
                 if (query != null) {
                      try {
-                         System.out.println("Came to run of query");
                        if(query instanceof CollectProducer) {
-                           System.out.println("Is an instance of Collect Producer");
                            CollectProducer query1 = (CollectProducer) query;
                            query1.open();
                            query1.fetchNext();
@@ -70,7 +67,6 @@ public class Worker {
                     } catch (TransactionAbortedException e1) {
                         e1.printStackTrace();
                     }
-                    System.out.println("Calling Finish Query from run");
                     Worker.this.finishQuery();
                 }
 
@@ -83,9 +79,7 @@ public class Worker {
                         break;
                     }
                 }
-                System.out.println("Going into second iteration of loop");
             }
-            System.out.println("Leaves loop");
         }
     }
 
@@ -235,32 +229,25 @@ public class Worker {
             while(!children.isEmpty()) {
                 OpIterator queryOption = children.remove();
                 if(queryOption instanceof SeqScan) {
-                    //System.out.println("Is an instance of SeqScan 123");
                     SeqScan sequential = (SeqScan) queryOption;
 
                     String tableName = sequential.getTableName();
-                    //System.out.println("TableName = " + tableName);
                     int tableId = Database.getCatalog().getTableId(tableName);
-                    //System.out.println("TableId = " + tableId);
                     sequential.reset(tableId, sequential.getAlias());
                 } else if(queryOption instanceof Producer) {
-                    //System.out.println("Is an instance of Producer");
                     Producer producer = (Producer) queryOption;
                     producer.setThisWorker(Worker.this);
                 } else if(queryOption instanceof Consumer) {
-                    //System.out.println("Is an instance of Consumer");
                     Consumer consumer = (Consumer) queryOption;
                     this.inBuffer.put(consumer.getOperatorID(), new LinkedBlockingQueue<ExchangeMessage>());
                     consumer.setBuffer(inBuffer.get(consumer.getOperatorID()));
                 }
                 if(queryOption instanceof Operator) {
-                    //System.out.println("Adding Children");
                     Operator operator = (Operator) queryOption;
                     OpIterator[] childrenArray = operator.getChildren();
                     for(int i = 0; i < childrenArray.length; i ++) {
                         children.add(childrenArray[i]);
                     }
-                    //System.out.println("Finished adding children");
                 }
             }
         } catch(Exception e) {
@@ -278,14 +265,8 @@ public class Worker {
                                                   ArrayList<ParallelOperatorID> oIds) {
         if (root instanceof Consumer)
             oIds.add(((Consumer) root).getOperatorID());
-        /*if(root instanceof ShuffleConsumer)
-            System.out.println("Shuffle Consumer instance = " + ((ShuffleConsumer)root).getName() + ((Consumer)root).getOperatorID());
-        if(root instanceof CollectConsumer)
-            System.out.println("Collect Consumer instance = " + ((CollectConsumer)root).getName() + ((Consumer)root).getOperatorID());*/
         if (root instanceof Operator) {
-            //System.out.println(((Operator) root).getChildren());
             for (OpIterator c : ((Operator) root).getChildren()) {
-                System.out.println(c == null);
                 collectConsumerOperatorIDs(c, oIds);
             }
         }
@@ -333,7 +314,6 @@ public class Worker {
         collectConsumerOperatorIDs(query, ids);
         Worker.this.inBuffer.clear();
         for (ParallelOperatorID id : ids) {
-           // System.out.println("Putting into map id = " + id);
             Worker.this.inBuffer.put(id,
                     new LinkedBlockingQueue<ExchangeMessage>());
         }
@@ -346,7 +326,6 @@ public class Worker {
      * This method should be called when a data item is received
      * */
     public void receiveData(ExchangeMessage data) {
-        //System.out.println("Map = " + Worker.this.inBuffer);
         if (data instanceof TupleBag)
             System.out.println("TupleBag received from " + data.getWorkerID()
                     + " to Operator: " + data.getOperatorID());
@@ -355,14 +334,6 @@ public class Worker {
                     + " to Operator: " + data.getOperatorID());
         LinkedBlockingQueue<ExchangeMessage> q = null;
         q = Worker.this.inBuffer.get(data.getOperatorID());
-        if(data == null) {
-            System.out.println("Data is null");
-        }
-        if(q == null) {
-            System.out.println("Data.getOperatorID = " + data.getOperatorID());
-            System.out.println("Contains? " + Worker.this.inBuffer.containsKey(data.getOperatorID()));
-            System.out.println("Queue of messages is null");
-        }
         q.offer(data);
     }
 

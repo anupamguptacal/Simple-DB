@@ -12,7 +12,6 @@ public class Join extends Operator {
     private OpIterator child2;
     private JoinPredicate p;
     private List<Tuple> joinedTuples;
-    // private Tuple next;
     private boolean computed;
     private Iterator<Tuple> tuplesIterator;
     private static final long serialVersionUID = 1L;
@@ -33,7 +32,6 @@ public class Join extends Operator {
         this.child2 = child2;
         this.p = p;
         this.joinedTuples = new ArrayList<Tuple>();
-        //this.next = null;
         computed = false;
         tuplesIterator = null;
     }
@@ -89,7 +87,6 @@ public class Join extends Operator {
         super.close();
         this.child1.close();
         this.child2.close();
-        //this.next = null;
         this.computed = false;
         this.joinedTuples = null;
         tuplesIterator = null;
@@ -98,7 +95,6 @@ public class Join extends Operator {
     public void rewind() throws DbException, TransactionAbortedException {
         this.child1.rewind();
         this.child2.rewind();
-        //this.next = null;
     }
 
     /**
@@ -153,45 +149,6 @@ public class Join extends Operator {
         } else {
             return null;
         }
-        /*
-        boolean found = false;
-        boolean possible = child1.hasNext() && child2.hasNext();
-        if(!possible) {
-            return null;
-        }
-        if(next == null && child1.hasNext()) {
-            next = child1.next();
-        }
-        //System.out.println("Child2.hasNext() = " + child2.hasNext() + " child1.hasNext() = " + child1.hasNext() + "next == " + next);
-        while(!found) {
-            //What about when child2 has tuples but child1 doesn't
-            if(!child2.hasNext()) {
-                child2.rewind();
-                if(child1.hasNext()) {
-                    next = child1.next();
-                } else {
-                    return null;
-                }
-            }
-            Tuple secondTuple = child2.next();
-            if(next == null) {
-                System.out.println("child1 gives a null tuple. Child1 is " + child1);
-            }
-            if(next != null && p.filter(next, secondTuple)) {
-                TupleDesc combined = this.getTupleDesc();
-                Tuple tuple = new Tuple(combined);
-                int index = 0;
-                for(int i = 0; i < next.listOfItems.size(); i++) {
-                    tuple.setField(index++, next.getField(i));
-                }
-                for(int j = 0; j < secondTuple.listOfItems.size(); j++) {
-                    tuple.setField(index++, secondTuple.getField(j));
-                }
-                return tuple;
-            }
-        }
-        return null;
-        */
     }
 
     @Override

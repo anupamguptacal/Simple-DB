@@ -55,8 +55,6 @@ public class ShuffleProducer extends Producer {
     class WorkingThread extends Thread {
         IoSession[] sessions = new IoSession[ShuffleProducer.this.workers.length];
         public void run() {
-            System.out.println("run is called");
-            System.out.println("Workers.length = " + ShuffleProducer.this.workers.length);
             for(int i = 0; i < ShuffleProducer.this.workers.length; i++) {
                 IoSession session = ParallelUtility.createSession(
                         ShuffleProducer.this.workers[i].getAddress(),
@@ -72,7 +70,6 @@ public class ShuffleProducer extends Producer {
                 while (ShuffleProducer.this.child.hasNext()) {
                     Tuple tuple = ShuffleProducer.this.child.next();
                     int partitionValue = pf.partition(tuple, getTupleDesc());
-                    //System.out.println("Partition Value returned = " + partitionValue);
                     bufferStorage[partitionValue].add(tuple);
                     int cnt = bufferStorage[partitionValue].size();
                     if (cnt >= TupleBag.MAX_SIZE) {
